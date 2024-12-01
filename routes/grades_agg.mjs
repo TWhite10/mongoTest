@@ -183,4 +183,42 @@ router.get("/stats/:id", async(req,res)=>{
    res.status(200).json({error:"Error:Item(s) not found" });
   }
 });
+
+async function indexes() {
+  await db.collection("grades").createIndex({ "student_id": 1 });
+  await db.collection("grades").createIndex({ "class_id": 1 })
+}
+async function compoundedIndexes() {
+  await db.collection("grades").createIndex({ "student_id": 1 , "class_id": 1 });
+  
+}
+await indexes();
+await compoundedIndexes();
+//validation rules on the grades collection
+db.runCommand( {
+  collMod:"grades",
+  validator: {
+     $jsonSchema: {
+        bsonType: "object",
+        title: "Student Object Validation",
+        required: [  "class_id","student_id" ],
+        properties: {
+          
+           class_id: {
+              bsonType: "int",
+              minimum: 0,
+              maximum: 300,
+              description: "'class_id' must be an integer in [ 0, 300 ] and is required"
+           },
+           student_id: {
+              bsonType:"int",
+              minimum: 0, 
+              description: "'student_id' must be an integer greater or equal to [ 0 ] and is required"
+           }
+        }
+     }
+  },
+  validationAction:"warn"
+  
+} )
 export default router;
