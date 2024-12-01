@@ -1,13 +1,13 @@
-
 import express from "express";
+import grades from "./routes/grades.mjs";
+import grades_agg from "./routes/grades_agg.mjs";
 import dotenv from "dotenv";
 dotenv.config();
 
 const PORT = 5050;
 const app = express();
 
-import grades from "./routes/grades.mjs";
-import grades_agg from "./routes/grades_agg.mjs";
+
 
 app.use(express.json());
 

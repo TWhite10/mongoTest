@@ -19,6 +19,8 @@ const router = express.Router();
  */
 //The number of learners with a weighted average (as calculated by the existing routes) higher than 70%
 router.get("/stats", async(req,res)=>{
+  try{
+    
   let collection = await db.collection("grades");
   let result = await collection
     .aggregate([
@@ -28,7 +30,7 @@ router.get("/stats", async(req,res)=>{
       },
       {
         $group: {
-          _id: "$class_id",
+          _id: "$student_id",
           quiz: {
             $push: {
               $cond: {
@@ -61,6 +63,7 @@ router.get("/stats", async(req,res)=>{
       {
         $project: {
           _id: 1,
+          learner_id:"$_id",
           avg: {
             $sum: [
               { $multiply: [{ $avg: "$exam" }, 0.5] },
@@ -70,18 +73,114 @@ router.get("/stats", async(req,res)=>{
           },
         },
       },
-      {
-          $match : {avg:{$gte:70}},
+     {
+          $match : {
+            avg:{$gte:70},
+          },
       },
-      {
-        $count: "count"
-      }
+    
   
     ])
     .toArray();
     console.log(result)
+  const totalLeaners = (await collection.distinct("student_id")).length;
+  const learnersAbove70 = result.length;
+  const percentageAbove70 = (learnersAbove70/totalLeaners)*100;
 
-  if (!result) res.send("Not found").status(404);
-  else res.send(result).status(200);
+  res.status(200).json({ totalLeaners,percentageAbove70,learnersAbove70 }
+  );
+
+  }catch(error){
+    console.log("Error:",error);
+   res.status(200).json({error:"Error:Item(s) not found" });
+  }
+  
+  
     
 });
+
+//Create a GET route at /grades/stats/:id - learners within a class that has a class_id equal to the specified :id.
+
+router.get("/stats/:id", async(req,res)=>{
+  try{
+  const class_id = parseInt(req.params.id);
+  let collection = await db.collection("grades");
+  let result = await collection
+    .aggregate([
+      {
+        $match : {
+          class_id:class_id
+        },
+    },
+
+      {
+        $unwind: { path: "$scores" },
+      },
+      {
+        $group: {
+          _id: "$student_id",
+          quiz: {
+            $push: {
+              $cond: {
+                if: { $eq: ["$scores.type", "quiz"] },
+                then: "$scores.score",
+                else: "$$REMOVE",
+              },
+            },
+          },
+          exam: {
+            $push: {
+              $cond: {
+                if: { $eq: ["$scores.type", "exam"] },
+                then: "$scores.score",
+                else: "$$REMOVE",
+              },
+            },
+          },
+          homework: {
+            $push: {
+              $cond: {
+                if: { $eq: ["$scores.type", "homework"] },
+                then: "$scores.score",
+                else: "$$REMOVE",
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          learner_id:"$_id",
+          avg: {
+            $sum: [
+              { $multiply: [{ $avg: "$exam" }, 0.5] },
+              { $multiply: [{ $avg: "$quiz" }, 0.3] },
+              { $multiply: [{ $avg: "$homework" }, 0.2] },
+            ],
+          },
+        },
+      },
+    
+      {
+        $match : {
+          avg:{$gte:70},
+        },
+    },
+  
+    ])
+    .toArray();
+    console.log(result)
+  const totalLeaners = (await collection.distinct("student_id",{class_id:class_id})).length;
+  const learnersAbove70 = result.length;
+  const percentageAbove70 = (learnersAbove70/totalLeaners)*100;
+
+  res.status(200).json({ totalLeaners,percentageAbove70,learnersAbove70 }
+  );
+
+  }catch(error){
+    console.log("Error:",error);
+   res.status(200).json({error:"Error:Item(s) not found" });
+  }
+});
+export default router;
