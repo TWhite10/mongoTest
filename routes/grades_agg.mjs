@@ -30,7 +30,7 @@ router.get("/stats", async(req,res)=>{
       },
       {
         $group: {
-          _id: "$student_id",
+          _id: "$learner_id",
           quiz: {
             $push: {
               $cond: {
@@ -83,7 +83,7 @@ router.get("/stats", async(req,res)=>{
     ])
     .toArray();
     console.log(result)
-  const totalLeaners = (await collection.distinct("student_id")).length;
+  const totalLeaners = (await collection.distinct("learner_id")).length;
   const learnersAbove70 = result.length;
   const percentageAbove70 = (learnersAbove70/totalLeaners)*100;
 
@@ -118,7 +118,7 @@ router.get("/stats/:id", async(req,res)=>{
       },
       {
         $group: {
-          _id: "$student_id",
+          _id: "$learner_id",
           quiz: {
             $push: {
               $cond: {
@@ -171,7 +171,7 @@ router.get("/stats/:id", async(req,res)=>{
     ])
     .toArray();
     console.log(result)
-  const totalLeaners = (await collection.distinct("student_id",{class_id:class_id})).length;
+  const totalLeaners = (await collection.distinct("learner_id",{class_id:class_id})).length;
   const learnersAbove70 = result.length;
   const percentageAbove70 = (learnersAbove70/totalLeaners)*100;
 
@@ -185,11 +185,11 @@ router.get("/stats/:id", async(req,res)=>{
 });
 
 async function indexes() {
-  await db.collection("grades").createIndex({ "student_id": 1 });
+  await db.collection("grades").createIndex({ "learner_id": 1 });
   await db.collection("grades").createIndex({ "class_id": 1 })
 }
 async function compoundedIndexes() {
-  await db.collection("grades").createIndex({ "student_id": 1 , "class_id": 1 });
+  await db.collection("grades").createIndex({ "learner_id": 1 , "class_id": 1 });
   
 }
 await indexes();
@@ -200,8 +200,8 @@ db.runCommand( {
   validator: {
      $jsonSchema: {
         bsonType: "object",
-        title: "Student Object Validation",
-        required: [  "class_id","student_id" ],
+        title: "learner Object Validation",
+        required: [  "class_id","learner_id" ],
         properties: {
           
            class_id: {
@@ -210,10 +210,10 @@ db.runCommand( {
               maximum: 300,
               description: "'class_id' must be an integer in [ 0, 300 ] and is required"
            },
-           student_id: {
+           learner_id: {
               bsonType:"int",
               minimum: 0, 
-              description: "'student_id' must be an integer greater or equal to [ 0 ] and is required"
+              description: "'learner_id' must be an integer greater or equal to [ 0 ] and is required"
            }
         }
      }
@@ -222,3 +222,5 @@ db.runCommand( {
   
 } )
 export default router;
+
+
